@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BosTelegram</title>
+    <style>
+        body {
+            background-color: black;
+            color: #18e309; /* Bright green */
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            width: 50%;
+        }
+
+        h1 {
+            color: #18e309; /* 1990s green */
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #787a76; /* crappy monitor greyu for subheading */
+            font-size: 0.9em;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .config {
+            margin-bottom: 15px;
+        }
+
+        .config input {
+            background-color: black;
+            color: #18e309;
+            border: 1px solid #787a76;
+            padding: 5px;
+            width: 30%;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .config input[readonly] {
+            color: #787a76; 
+        }
+
+        .chat-box {
+            border: 2px double #787a76; /* Double border in grey */
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+            color: #18e309; 
+            text-align: left; /* Align text to the left, center looks kaka */
+        }
+
+        .chat-message {
+            margin: 5px 0;
+            font-size: 0.9em;
+            text-align: left; 
+        }
+
+        .chat-input-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            background-color: black;
+            color: #18e309;
+            border: 2px solid #18e309; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.8em; 
+        }
+
+        .status-indicator {
+            font-size: 1.5em;
+            font-weight: bold; 
+        }
+
+        .status-online {
+            color: cyan; /* Cyan status indicator for LEKKER online */
+        }
+
+        .status-offline {
+            color: #ff1a1a; /* Bright red iindicator for offline */
+        }
+
+        .latency {
+            color: #787a76; /* server latency grey */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>BosTelegram</h1>
+    <h2>by Simple-Earth.org</h2>
+
+    <div class="config">
+        <input type="text" id="username" placeholder="Username" value="user123">
+        <input type="text" id="hostname" value="yourserver.yourdomain.or.yourIP" readonly>
+        <input type="number" id="port" placeholder="Port" value="8100">
+    </div>
+
+    <div class="chat-box" id="chat-box">
+        <!-- user chat box area  -->
+    </div>
+
+    <div class="chat-input-container">
+        <input type="text" id="chat-input" class="chat-input" placeholder="..." onkeypress="handleKeyPress(event)">
+    </div>
+
+    <div class="status-container">
+        <span id="status-indicator" class="status-indicator status-offline">O</span>
+        <span id="latency-indicator" class="latency">Latency: 9999</span>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const usernameInput = document.getElementById('username');
+    const hostnameInput = document.getElementById('hostname');
+    const portInput = document.getElementById('port');
+    const statusIndicator = document.getElementById('status-indicator');
+    const latencyIndicator = document.getElementById('latency-indicator');
+
+    window.onload = function() {
+        const defaultUsername = `Mr_${generateRandomString(8)}`;
+        usernameInput.value = defaultUsername;
+        usernameInput.addEventListener('change', lockUsername);
+    };
+
+    function generateRandomString(length) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+    }
+
+    function lockUsername() {
+        usernameInput.setAttribute('readonly', true);
+        usernameInput.style.color = '#787a76'; // not secure, but at least helps annoyance changes
+        usernameInput.removeEventListener('change', lockUsername); // remove listener
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            const message = chatInput.value.trim();
+            if (message !== '') {
+                sendChatMessage(usernameInput.value, message);
+                chatInput.value = ''; // nuke input box
+            }
+        }
+    }
+
+    function sendChatMessage(user, message) {
+        const url = `http://${hostnameInput.value}:${portInput.value}/sendchat`;
+        const payload = {
+            user: user,
+            message: message
+        };
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(response => response.json())
+          .then(data => {
+              if (data.status !== 'success') {
+                  console.error('Failed to send message:', data.message);
+              }
+          })
+          .catch(error => console.error('Error:', error));
+    }
+
+    function fetchChats() {
+        const url = `http://${hostnameInput.value}:${portInput.value}/getchats`;
+        const startTime = new Date().getTime(); 
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const endTime = new Date().getTime(); 
+                const latency = endTime - startTime; 
+                updateChatBox(data);
+                setLatency(latency); // update latency display
+                setStatusIndicator(true); // server is online
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                setStatusIndicator(false); // server is offline
+                setLatency(null); // no latency to display
+            });
+    }
+
+    function updateChatBox(chats) {
+        chatBox.innerHTML = ''; 
+
+        chats.forEach(chat => {
+            const chatElement = document.createElement('div');
+            chatElement.className = 'chat-message';
+            chatElement.innerHTML = `<span class="time">[${new Date(chat.datetime).toLocaleTimeString()}]</span> <span class="username">${chat.user.toLowerCase()}:</span> ${chat.message}`;
+            chatBox.appendChild(chatElement);
+        });
+
+        // Scroll to the bottom of the chat box
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function setStatusIndicator(isOnline) {
+        if (isOnline) {
+            statusIndicator.classList.remove('status-offline');
+            statusIndicator.classList.add('status-online');
+        } else {
+            statusIndicator.classList.remove('status-online');
+            statusIndicator.classList.add('status-offline');
+        }
+    }
+
+    function setLatency(latency) {
+        if (latency !== null) {
+            latencyIndicator.textContent = `Latency: ${latency} ms`;
+        } else {
+            latencyIndicator.textContent = 'Latency: 9999';
+        }
+    }
+
+    // Fetch chats every 1 seconds - because data is cheap
+    setInterval(fetchChats, 1000);
+
+    // Initial fetch to populate the chat box
+    fetchChats();
+
+    // Check server status every 3 seconds
+    setInterval(() => {
+        const url = `http://${hostnameInput.value}:${portInput.value}/getchats`;
+        const startTime = new Date().getTime();
+
+        fetch(url)
+            .then(response => {
+                const endTime = new Date().getTime();
+                const latency = endTime - startTime;
+                if (response.ok) {
+                    setStatusIndicator(true);
+                    setLatency(latency);
+                } else {
+                    setStatusIndicator(false);
+                    setLatency(null);
+                }
+            })
+            .catch(error => {
+                setStatusIndicator(false);
+                setLatency(null);
+            });
+    }, 3000);
+</script>
+
+</body>
+</html>
