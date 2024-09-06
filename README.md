@@ -4,14 +4,14 @@ This is a simple, non-secure, non-private chat server that you can run anywhere 
 It's simple, old-school, and does the job for a project I created it for. It's not an ircd, and it's not related to Telegram. Telegram is actually a word, referring to something much older than the Telegram network/app.
 
 The Project Structure
-
+```
 BosTelegram/
 ├── bosServer.py
 ├── bosTelegram.cfg
 ├── db/
 │   └── chats.db
 └── README.md (this file)
-
+```
 ![image](https://github.com/user-attachments/assets/5626e50d-c851-4626-bfdb-cf081df8d421)
 
 ## Deployment Information
